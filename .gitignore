@@ -1,0 +1,3 @@
+# for common ignores across all directories.
+
+__pycache__/
