@@ -15,6 +15,10 @@ My goal for this project was to create and train neural networks of various type
 I wanted to use 1,000 images to train the network and calculate accuracy using all 10,000 test images.
 
 
+## Networks created
+- 2-layer (784-10) linear
+
+
 ## References
 I created these networks when studying the book ['grokking Deep Learning'](https://github.com/iamtrask/Grokking-Deep-Learning) by Andrew W. Trask.
 Although the relevant theory and approaches are inspired from the book, the programs
