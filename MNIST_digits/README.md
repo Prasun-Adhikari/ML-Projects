@@ -18,6 +18,7 @@ I wanted to use 1,000 images to train the network and calculate accuracy using a
 ## Networks created
 - 2-layer (784-10) linear
 - 3-layer (784-N-10) relu
+- 3-layer (784-N-10) relu + dropout
 
 
 ## References
