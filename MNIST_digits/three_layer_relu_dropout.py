@@ -12,8 +12,8 @@ N_INPUTS, N_OUTPUTS = 784, 10
 N_HIDDEN = 16
 TRAIN_DATA_SIZE = 1_000
 
-ALPHA = 0.005
-BATCH_SIZE, NUM_ITER = 10, 500
+ALPHA = 0.05
+BATCH_SIZE, NUM_ITER = 100, 500
 
 def main() -> None:
     train_data = get_train_data(TRAIN_DATA_SIZE)
@@ -37,16 +37,19 @@ def obtain_outputs(weights_0_1: np.ndarray, weights_1_2: np.ndarray, layer0: np.
     return layer2
 
 def update_weights(weights_0_1: np.ndarray, weights_1_2: np.ndarray, 
-                   layer0: np.ndarray, layer2_exp: np.ndarray) -> np.ndarray:
-    '''Return the desired weight delta for given values.'''
+                   layer0: np.ndarray, layer2_exp: np.ndarray) -> None:
+    '''Updates the weights using given batch of values.'''
+    
     dropout_mask = np.random.randint(2, size=N_HIDDEN)
-    layer1 = relu(weights_0_1.dot(layer0)) * dropout_mask * 2
-    layer2 = weights_1_2.dot(layer1)
+    layer1 = relu(np.tensordot(layer0, weights_0_1, axes=(1,1))) * dropout_mask * 2
+    layer2 = np.tensordot(layer1, weights_1_2, axes=(1,1))
     delta2 = layer2 - layer2_exp
-    delta1 = weights_1_2.T.dot(delta2.reshape(N_OUTPUTS, 1)).T  * relu_der(layer1) * dropout_mask
-    weights_1_2_delta = delta2.reshape(N_OUTPUTS, 1).dot(layer1.reshape(1, N_HIDDEN))
-    weights_0_1_delta = delta1.reshape(N_HIDDEN, 1).dot(layer0.reshape(1, N_INPUTS))
-    return weights_0_1_delta, weights_1_2_delta
+    delta1 = np.tensordot(delta2, weights_1_2, axes=(1,0)) * relu_der(layer1) * dropout_mask
+    
+    weights_1_2_delta = np.tensordot(delta2, layer1, axes=(0,0))
+    weights_0_1_delta = np.tensordot(delta1, layer0, axes=(0,0))
+    weights_1_2 -= (ALPHA / BATCH_SIZE * weights_1_2_delta)
+    weights_0_1 -= (ALPHA / BATCH_SIZE * weights_0_1_delta)
 
 
 def train_network(weights_0_1: np.ndarray, weights_1_2: np.ndarray, train_data: np.ndarray) -> None:
@@ -54,21 +57,12 @@ def train_network(weights_0_1: np.ndarray, weights_1_2: np.ndarray, train_data: 
     train_images, train_labels = train_data
 
     for iter_no in range(NUM_ITER):
-        weight_deltas_0_1 = np.zeros((N_HIDDEN, N_INPUTS))
-        weight_deltas_1_2 = np.zeros((N_OUTPUTS, N_HIDDEN))
-        no_data = 0
-        for image, label in zip(train_images, train_labels):
-            label_list = np.zeros(10)
-            label_list[label] = 1
-            weights_deltas = update_weights(weights_0_1, weights_1_2, image, label_list)
-            weight_deltas_0_1 += weights_deltas[0]
-            weight_deltas_1_2 += weights_deltas[1]
-            no_data += 1
-            if no_data % BATCH_SIZE == 0:
-                weights_0_1 -= (ALPHA / BATCH_SIZE * weight_deltas_0_1)
-                weights_1_2 -= (ALPHA / BATCH_SIZE * weight_deltas_1_2)
-                weight_deltas_0_1 = np.zeros((N_HIDDEN, N_INPUTS))
-                weight_deltas_1_2 = np.zeros((N_OUTPUTS, N_HIDDEN))
+        for batch_start in range(0, TRAIN_DATA_SIZE, BATCH_SIZE):
+            image_batch = train_images[batch_start: batch_start + BATCH_SIZE]
+            label_batch = train_labels[batch_start: batch_start + BATCH_SIZE]
+            label_list = np.zeros((BATCH_SIZE, 10))
+            label_list[np.arange(BATCH_SIZE), label_batch] = 1
+            update_weights(weights_0_1, weights_1_2, image_batch, label_list)
 
         print(f'iterations: {iter_no+1}', end ='\r')
     print()
